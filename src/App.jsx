@@ -57,16 +57,35 @@ function App() {
       await ndef.scan();
       console.log("> Scan started");
 
-      ndef.addEventListener("reading", ({ serialNumber }) => {
-        console.log(`> Serial Number: ${serialNumber}`);
-        const user = users.find((u) => u.id === serialNumber);
-        if (user) {
-          setScanResult(user);
-        } else {
-          alert("Utilisateur introuvable !");
+      ndef.onreading = (event) => {
+        const { message } = event;
+        let detectedId = null;
+
+        for (const record of message.records) {
+          console.log("Record type:  " + record.recordType);
+          console.log("MIME type:    " + record.mediaType);
+          console.log("Record id:    " + record.id);
+
+          if (record.recordType === "text") {
+            const textDecoder = new TextDecoder(record.encoding || "utf-8");
+            detectedId = textDecoder.decode(record.data);
+            console.log("Detected ID: " + detectedId);
+          }
         }
+
+        if (detectedId) {
+          const user = users.find((u) => u.id === detectedId);
+          if (user) {
+            setScanResult(user);
+          } else {
+            alert("Utilisateur introuvable !");
+          }
+        } else {
+          alert("Aucune donnée NFC valide détectée.");
+        }
+
         setIsScanning(false);
-      });
+      };
     } catch (error) {
       console.error("Erreur lors du scan NFC :", error);
       alert("Une erreur est survenue lors du scan.");
